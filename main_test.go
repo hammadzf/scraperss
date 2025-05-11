@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-const healthzEndpoint = "http://localhost:8080/v1/healthz"
-const errorEndpoint = "http://localhost:8080/v1/err"
-const usersEndpoint = "http://localhost:8080/v1/users"
-const feedsEndpoint = "http://localhost:8080/v1/feeds"
+const healthzEndpoint = "http://localhost:80/v1/healthz"
+const errorEndpoint = "http://localhost:80/v1/err"
+const usersEndpoint = "http://localhost:80/v1/users"
+const feedsEndpoint = "http://localhost:80/v1/feeds"
 
 func cleanUp(userId string) {
 	// cleanup by deleting the created test user from DB

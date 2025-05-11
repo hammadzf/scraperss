@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,8 +12,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/hammadzf/scraperss/internal/database"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/pressly/goose/v3"
 )
 
 // for connection to DB
@@ -20,25 +21,36 @@ type apiConfig struct {
 	DB *database.Queries
 }
 
+//go:embed sql/schema/*.sql
+var embedMigrations embed.FS
+
 func main() {
-	// Load environment file
-	godotenv.Load(".env")
-	// Get port number
-	portString := os.Getenv("PORT")
-	if portString == "" {
-		log.Fatal("Couldn't find PORT value in environment file.")
-	}
-	// Get DB URL
-	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		log.Fatal("Couldn't find DB URL in the environment file.")
+
+	// Get DB password
+	bin, err := os.ReadFile("/run/secrets/db-password")
+	if err != nil {
+		log.Fatal("Couldn't get DB password:", err)
 	}
 
 	// Connect to DB
-	conn, err := sql.Open("postgres", dbURL)
+	conn, err := sql.Open("postgres", fmt.Sprintf("postgres://postgres:%s@db:5432/scraperss?sslmode=disable", string(bin)))
 	if err != nil {
 		log.Fatal("Couldn't connect to DB:", err)
 	}
+
+	// run goose migrations
+	goose.SetBaseFS(embedMigrations)
+
+	err = goose.SetDialect("postgres")
+	if err != nil {
+		log.Fatal("Couldn't set dialect for goose:", err)
+	}
+
+	err = goose.Up(conn, "sql/schema")
+	if err != nil {
+		log.Fatal("Couldn't run goose migrations:", err)
+	}
+
 	db := database.New(conn)
 
 	// DB Config
@@ -84,12 +96,11 @@ func main() {
 
 	// create server
 	srv := http.Server{
-		Addr:    ":" + portString,
 		Handler: router,
 	}
 
 	// run service and catch error
-	fmt.Printf("Starting server on port %s", portString)
+	log.Printf("Starting server on port 80")
 	err = srv.ListenAndServe()
 	if err != nil {
 		log.Fatal("Couldn't start server:", err)

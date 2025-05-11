@@ -34,7 +34,10 @@ The overall system architecture is illustrated below, showcasing relevant module
 # API Structure & Resources 
 The API endpoints, supported HTTP methods over those endpoints, and main functionality and characteritics of those endpoints are listed in the following table.
 
-| Method | API endpoint | Authorization | Scope| Functionality |
+Root API endpoint: /v1
+Full path for example: http://{scraperss-container-address}:80/v1/{desired-endpoint}
+
+| Method | endpoint | Authorization | Scope| Functionality |
 | --- | --- | --- | --- | --- |
 | POST | /users | unauthorized | Admin | creates a new user and generates a unique private key for the user |
 | GET | /users | unauthorized | Admin | returns the list of all users |
@@ -64,28 +67,13 @@ To create a feed for a user, use the following format in the POST request:
 # Usage
 ## Pre-requisites
 - Golang v1.24.0: The scraperss service is built in Go version v1.24.0 and requires Go toolchain to build it from source. 
-- PostgreSQL 17: Additionally, the service's data layer makes use of Postgres 17 as application's database.
-- goose package for managing Postgres migrations
-
-## DB Setup
-You will need a database migration tool to set up the required tables in Postgres. [`goose`](https://github.com/pressly/goose) can be used for this purpose. Once goose is installed, run the following in the `./sql/schema` directory:
-```
-goose postgres postgres://postgres@localhost:5432/<db_name> up 
-```
-Do not add the disable ssl flag in the DB_URL.
+- Docker
 
 ## Configuration
-The application requires two configuration parameters to be provided as environment variables in a `.env` file. The application code will automatically retrieve these parameters from the .env file.
-- PORT: the port over which the HTTP server listens for requests, e.g., 8080
-- DB_URL: URL of postgres DB to which the service will connect, e.g., postgres://postgres@localhost:5432/<db_name>?sslmode=disable
+Set up your password for the DB in the appropriate [file](./db/password.txt).
+Name of the database, user, password, DB data etc. can also be configured in the docker compose [manifest](./compose.yaml).
 
-## Build and run
-To build the application, run the following in the root directory:
-```
-go build
-```
-The above command will generate an executable file named as `scraperss.exe`. Run that executable in your terminal (Powershell or Linux terminal) like `.\scraperss.exe` in case of Windows or `./scraperss.exe` in case of Linux. 
-
+Run `docker compose up --build` in the root directory. This will spin up two containers, one each for scraperss and postgres services. The scraperss service can be reached using http at localhost:80 or directly at {container-address}:80.
 
 # Repository structure and files
 ## Main Package
@@ -98,6 +86,8 @@ The main package contains the following key components:
 - **models.go**: translate DB objects to structs with appropriate json keys that can be sent in response messages.
 - **rss.go**: defines structs for items recieved on an RSS feed and a function to get RSS feeds from their URLs.
 - **scrape.go**: implements functions to get feeds from the DB that need fetching and then scrapes each individual feed for its items in a concurrent fashion using go routines.
+- **Dockerfile**: to build and run the scraperss service in a Docker container.
+- **compose.yaml**: Docker compose file containing two services, scraperss and db (Postgres).
 
 ## Internal Packages
 ### Auth
